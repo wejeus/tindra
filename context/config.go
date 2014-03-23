@@ -18,15 +18,14 @@ type Config struct {
 	// Pygments         bool
 	// Host             string
 	// Port             int
-	// MarkdownExt      string
 	// BaseDir          string
 	ExcerptSeparator string
+	MarkdownExt      map[string]bool
 	BasePath         string
 	IncludesPath     string
 	LayoutsPath      string
 	PostsPath        string
 	BuildPath        string
-	// ProcessWorkDir   string
 }
 
 func NewConfig() *Config {
@@ -53,10 +52,14 @@ func NewConfig() *Config {
 
 	defaults := Config{
 		// Host:             "0.0.0.0",
-		// ExcerptSeparator: "\n\n",
 		// Port:             4000,
-		// MarkdownExt:      "markdown,mkdown,mkdn,mkd,md",
-		// BaseDir:          "/",
+		MarkdownExt: map[string]bool{
+			"markdown": true,
+			"mkdown":   true,
+			"mkdn":     true,
+			"mkd":      true,
+			"md":       true,
+		},
 		BasePath:     basePath,
 		IncludesPath: filepath.Join(basePath, "includes"),
 		LayoutsPath:  filepath.Join(basePath, "layouts"),
