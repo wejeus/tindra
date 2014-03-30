@@ -14,11 +14,11 @@ func init() {
 }
 
 type Config struct {
-	// Name             string
 	// Pygments         bool
 	// Host             string
 	// Port             int
 	// BaseDir          string
+	Name             string
 	ExcerptSeparator string
 	MarkdownExt      map[string]bool
 	BasePath         string

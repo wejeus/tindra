@@ -1,6 +1,7 @@
 package context
 
 import (
+	"bytes"
 	"errors"
 	"github.com/russross/blackfriday"
 	"io/ioutil"
@@ -9,67 +10,117 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"text/template"
 )
 
+// TODO: Make internal structure private and export this to template execution?
 type Post struct {
-	Title   string
-	Parent  *Layout
-	Content []byte // Might contain markdown. TODO: Consider possibility to include template code (as addition to markdown)
-	Path    string
+	parent   *Layout
+	content  []byte // Contains Markdown
+	filename string
+	path     string
+
+	// Public to site generation
+	Title     string
+	Date      string // TODO
+	Permalink string
+	// TODO: add get excerpt function here
 }
 
 func (site *Site) NewPost(filename string, data []byte) (post *Post) {
-	pathFromFilename, titleFromFilename, err := splitFilname(filename)
+	date, title, err := splitPostFilname(filename)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	excerpt, body, err := extractExcerptAndBody(data, "\n\n") // TODO: get from site config
+	frontMatter, body, err := extractFrontMatterAndBody(data, "\n\n") // TODO: get from site config
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	if excerpt.Layout == "" {
-		log.Fatal("error: \"" + filename + "\" needs to declare a layout")
-	}
-	if site.Layouts[excerpt.Layout] == nil {
-		log.Fatal("error: \"" + filename + "\" declared layout does not exist")
+	if frontMatter.Layout != "" && site.Layouts[frontMatter.Layout] == nil {
+		log.Fatal("error: \"" + filename + "\" declared layout that do not exist!")
 	}
 
-	parentLayout := site.Layouts[excerpt.Layout]
+	parentLayout := site.Layouts[frontMatter.Layout]
 
-	if excerpt.Title == "" {
-		excerpt.Title = titleFromFilename
+	postPath := strings.Replace(date, "-", "/", 2)
+
+	var filenamePath string
+	if frontMatter.Title == "" {
+		filenamePath = filepath.Join(site.config.BuildPath, title)
+	} else {
+		filenamePath = filenameFromTitle(postPath, frontMatter.Title)
 	}
 
-	return &Post{Title: excerpt.Title, Parent: parentLayout, Content: body, Path: pathFromFilename} // TODO: Does this cause a copy upon return?
+	return &Post{
+		parent:    parentLayout,
+		content:   body,
+		filename:  filenamePath,
+		path:      postPath,
+		Title:     frontMatter.Title,
+		Date:      date,
+		Permalink: filenamePath,
+	}
+}
+
+// TODO: Change to something fancier (extract first paragraph?)
+func (p *Post) Excerpt() string {
+	head := p.content[0 : len(p.content)/5]
+	return string(blackfriday.MarkdownCommon(head))
 }
 
 func applyLayout(layout *Layout, content []byte) []byte {
+	if layout == nil {
+		return content
+	}
 	contentRegexp := regexp.MustCompile("{% content %}")
 	return contentRegexp.ReplaceAllLiteral(layout.Data, content)
 }
 
-// basepath?
-func (p *Post) BuildAndInstall(path string) (err error) {
-	html := blackfriday.MarkdownCommon(p.Content)
-
-	rendered := applyLayout(p.Parent, html)
-
-	// render template
-
+func filenameFromTitle(path, title string) string {
 	// copy template to build dir under subdir Post.SubPath
-	filenameTitle := strings.Replace(p.Title, " ", "_", -1)
-	outPath := filepath.Join(path, p.Path)
-	filename := filepath.Join(outPath, filenameTitle+".html") // Fixme: better handling
+	filename := strings.Replace(title, " ", "_", -1)
+	return filepath.Join(path, filename+".html") // Fixme: better handling
+}
 
-	// Write to disk
-	err = os.MkdirAll(outPath, os.ModeDir|0755)
+type Page struct {
+	Title string // site title
+	Posts map[string]*Post
+	Post  *Post
+}
+
+// Assumes filename and path is absolute
+func (p *Post) buildAndInstall(site *Site) (err error) {
+	outPath := filepath.Join(site.config.BuildPath, p.path)
+	outFile := filepath.Join(site.config.BuildPath, p.filename)
+	log.Printf("building: %s\n", outFile)
+
+	// TODO: Only parse markdown for posts
+	html := blackfriday.MarkdownCommon(p.content)
+	rendered := applyLayout(p.parent, html)
+	page := Page{
+		Title: p.Title,
+		Posts: site.Posts,
+		Post:  p,
+	}
+
+	// execute template
+	t := template.Must(template.New("layout").Parse(string(rendered)))
+	var parsed bytes.Buffer
+	err = t.Execute(&parsed, page)
 	if err != nil {
 		return
 	}
-	log.Printf("installing: %s\n", filename)
-	return ioutil.WriteFile(filename, rendered, 0644)
+
+	// Write to disk
+	err = os.MkdirAll(outPath, os.ModeDir|0755)
+	log.Print("XXX: " + outPath)
+	if err != nil {
+		return
+	}
+	log.Printf("installing: %s\n", outFile)
+	return ioutil.WriteFile(outFile, parsed.Bytes(), 0644)
 }
 
 // Post filename must be structured to include a filename prefix of "YYYY-MM-DD"
@@ -77,7 +128,7 @@ func (p *Post) BuildAndInstall(path string) (err error) {
 // If the post content does not contain any excerpt header the filename will be used as title
 //
 // Returns error if filname not valid.
-func splitFilname(filename string) (subpath string, title string, err error) {
+func splitPostFilname(filename string) (date string, title string, err error) {
 	bytes := []byte(filename)
 	matcher := regexp.MustCompile("^[0-9]{4}-[0-9]{2}-[0-9]{2}.*")
 	if !matcher.Match(bytes) {
@@ -86,7 +137,7 @@ func splitFilname(filename string) (subpath string, title string, err error) {
 	}
 
 	// extract date, title and extension
-	date := string(bytes[:10])
+	date = string(bytes[:10])
 	title = string(bytes[10:])
 	extension := filepath.Ext(title)
 	title = title[0 : len(title)-len(extension)]
@@ -94,8 +145,6 @@ func splitFilname(filename string) (subpath string, title string, err error) {
 	// clean up title by removing possible whitespace or custom wordseparators
 	title = strings.Trim(title, " -")
 	title = strings.Title(title)
-
-	subpath = strings.Replace(date, "-", "/", 2)
 
 	return
 }

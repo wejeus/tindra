@@ -8,9 +8,13 @@ import (
 
 func main() {
 
-	_, err := context.NewSite()
+	site, err := context.NewSite()
 	if err != nil {
-		log.Fatal("could not create new site!")
+		log.Print(err)
 	}
 
+	err = site.BuildAndInstall()
+	if err != nil {
+		log.Print(err)
+	}
 }
