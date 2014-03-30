@@ -64,7 +64,7 @@ func NewConfig() *Config {
 		IncludesPath: filepath.Join(basePath, "includes"),
 		LayoutsPath:  filepath.Join(basePath, "layouts"),
 		PostsPath:    filepath.Join(basePath, "posts"),
-		BuildPath:    filepath.Join(basePath, "build"),
+		BuildPath:    filepath.Join(basePath, "_build"),
 	}
 	return &defaults
 }

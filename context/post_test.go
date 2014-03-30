@@ -19,7 +19,7 @@ func Test_splitFilnameMatcher(t *testing.T) {
 	for _, f := range tests {
 		_, _, err := splitFilname(f.pattern)
 		if err != nil && f.match == true {
-			t.Errorf("date: %s should not match\n", f.pattern)
+			t.Errorf("filename datestring: \"%s\" should be allowed\n", f.pattern)
 		}
 	}
 }
@@ -40,7 +40,7 @@ func Test_splitFilnameTitelizer(t *testing.T) {
 	for _, f := range tests {
 		_, title, err := splitFilname(f.pattern)
 		if err != nil || f.title != title {
-			t.Errorf("correct: %s got %s\n", f.title, title)
+			t.Errorf("got: \"%s\" should be: \"%s\"\n", title, f.title)
 		}
 	}
 }

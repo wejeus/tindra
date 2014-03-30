@@ -30,6 +30,12 @@ Tindra relies on *convention over configuration* for many of its setttings.
 	index.html
 	config.yml
 
+## Generation dependency graph
+
+Includes are static and nothing can be inserted
+Layouts can use other layouts.
+Posts can use layouts
+
 ## API
 
 Include files: {{.Include('filename')}}
@@ -41,3 +47,7 @@ First paragraph may contain a Yaml header. The header affects the rendering of t
 	title: "My post title" // if not set uses filename as title
 	layout: "layout.html"  // if not set just outputs parsed markdown
 	---
+
+## Notes
+
+* Layouts are always keept preprocessed in memory and posts are stored with a pointer to layout and rendered when needed. Assumption here is that there will be more posts than layouts.
