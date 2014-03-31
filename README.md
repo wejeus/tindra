@@ -41,7 +41,7 @@ Posts can use layouts
 Include files: {{.Include('filename')}}
 
 ## Post
-First paragraph may contain a Yaml header. The header affects the rendering of the post. 
+All blog post files must begin with YAML front-matter. That is the first paragraph and contains a Yaml header. The header affects the rendering of the post. 
 
 	---
 	title: "My post title" // if not set uses filename as title

@@ -93,7 +93,7 @@ type Page struct {
 // Assumes filename and path is absolute
 func (p *Post) buildAndInstall(site *Site) (err error) {
 	outPath := filepath.Join(site.config.BuildPath, p.path)
-	outFile := filepath.Join(site.config.BuildPath, p.filename)
+	outFile := strings.ToLower(filepath.Join(site.config.BuildPath, p.filename))
 	log.Printf("building: %s\n", outFile)
 
 	// TODO: Only parse markdown for posts
@@ -115,7 +115,6 @@ func (p *Post) buildAndInstall(site *Site) (err error) {
 
 	// Write to disk
 	err = os.MkdirAll(outPath, os.ModeDir|0755)
-	log.Print("XXX: " + outPath)
 	if err != nil {
 		return
 	}

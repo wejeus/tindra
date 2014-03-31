@@ -10,22 +10,20 @@ import (
 
 func init() {
 	flag.Parse()
-	// TODO: check if target is valid Tindra site URL (check for existens of required dirs/files)
 }
 
 type Config struct {
-	// Pygments         bool
-	// Host             string
-	// Port             int
-	// BaseDir          string
-	Name             string
-	ExcerptSeparator string
-	MarkdownExt      map[string]bool
-	BasePath         string
-	IncludesPath     string
-	LayoutsPath      string
-	PostsPath        string
-	BuildPath        string
+	// FrontMatterSeparator string // TODO: Add!
+	Name        string
+	Debug       bool
+	MarkdownExt map[string]bool
+	BasePath    string
+	// IncludesPath string
+	// LayoutsPath  string
+	// PostsPath    string
+	// DataPath     string
+	// PluginsPath  string
+	// BuildPath    string
 }
 
 func NewConfig() *Config {
@@ -36,8 +34,6 @@ func NewConfig() *Config {
 		log.Fatal("can only generate one target!")
 	}
 
-	// TODO: Trim to pretty path (remove unnecessary "./" and similar)
-
 	basePath, err := filepath.Abs(target)
 	log.Printf("BasePath: %s\n", basePath)
 
@@ -45,14 +41,9 @@ func NewConfig() *Config {
 		log.Fatal("could not get current working directory!")
 	}
 
-	// TODO: Read path of executable? Maybe needed for something later?
-	// processWorkDir, err := filepath.Abs(filepath.Dir(os.Args[0]))
-
-	// TODO: preped all dirs with basepath directly
-
 	defaults := Config{
-		// Host:             "0.0.0.0",
-		// Port:             4000,
+		Name:  "Tindra ver. " + VERSION + " " + TAGLINE,
+		Debug: DEBUG,
 		MarkdownExt: map[string]bool{
 			"markdown": true,
 			"mkdown":   true,
@@ -60,19 +51,19 @@ func NewConfig() *Config {
 			"mkd":      true,
 			"md":       true,
 		},
-		BasePath:     basePath,
-		IncludesPath: filepath.Join(basePath, "includes"),
-		LayoutsPath:  filepath.Join(basePath, "layouts"),
-		PostsPath:    filepath.Join(basePath, "posts"),
-		BuildPath:    filepath.Join(basePath, "_build"),
+		BasePath: basePath,
+		// IncludesPath: filepath.Join(basePath, INCLUDES_DIR_NAME),
+		// LayoutsPath:  filepath.Join(basePath, LAYOUTS_DIR_NAME),
+		// PostsPath:    filepath.Join(basePath, POSTS_DIR_NAME),
+		// DataPath:     filepath.Join(basePath, DATA_DIR_NAME),
+		// PluginsPath:  filepath.Join(basePath, PLUGINS_DIR_NAME),
+		// BuildPath:    filepath.Join(basePath, BUILD_DIR_NAME),
 	}
 	return &defaults
 }
 
-/**
-If config file could not be read a default config and an error is returned.
-Its up to callee to decide if we should continue or not.
-*/
+// If config file could not be read a default config and an error is returned.
+// Its up to callee to decide if we should continue or not.
 func (c *Config) ReadFromConfigFile() (err error) {
 	uri := filepath.Join(c.BasePath, MAIN_CONFIG_FILENAME)
 	log.Printf("Reading config file: %s\n", uri)
