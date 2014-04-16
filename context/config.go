@@ -2,11 +2,14 @@ package context
 
 import (
 	"flag"
-	"gopkg.in/v1/yaml"
+	"fmt"
+	"gopkg.in/yaml.v1"
 	"io/ioutil"
 	"log"
 	"path/filepath"
 )
+
+// var Debug bool = false // TODO: Add custom logging class
 
 func init() {
 	flag.Parse()
@@ -14,16 +17,9 @@ func init() {
 
 type Config struct {
 	// FrontMatterSeparator string // TODO: Add!
-	Name        string
-	Debug       bool
+	SiteName    string
 	MarkdownExt map[string]bool
-	BasePath    string
-	// IncludesPath string
-	// LayoutsPath  string
-	// PostsPath    string
-	// DataPath     string
-	// PluginsPath  string
-	// BuildPath    string
+	basePath    string // should not be able to read from file.
 }
 
 func NewConfig() *Config {
@@ -35,15 +31,14 @@ func NewConfig() *Config {
 	}
 
 	basePath, err := filepath.Abs(target)
-	log.Printf("BasePath: %s\n", basePath)
+	fmt.Printf("BasePath: %s\n", basePath)
 
 	if err != nil {
 		log.Fatal("could not get current working directory!")
 	}
 
 	defaults := Config{
-		Name:  "Tindra ver. " + VERSION + " " + TAGLINE,
-		Debug: DEBUG,
+		SiteName: "Tindra ver. " + VERSION + " " + TAGLINE,
 		MarkdownExt: map[string]bool{
 			"markdown": true,
 			"mkdown":   true,
@@ -51,26 +46,32 @@ func NewConfig() *Config {
 			"mkd":      true,
 			"md":       true,
 		},
-		BasePath: basePath,
-		// IncludesPath: filepath.Join(basePath, INCLUDES_DIR_NAME),
-		// LayoutsPath:  filepath.Join(basePath, LAYOUTS_DIR_NAME),
-		// PostsPath:    filepath.Join(basePath, POSTS_DIR_NAME),
-		// DataPath:     filepath.Join(basePath, DATA_DIR_NAME),
-		// PluginsPath:  filepath.Join(basePath, PLUGINS_DIR_NAME),
-		// BuildPath:    filepath.Join(basePath, BUILD_DIR_NAME),
+		basePath: basePath,
 	}
 	return &defaults
+}
+
+func (c *Config) getAbsBuildPath() string {
+	return filepath.Join(c.basePath, BUILD_DIR_NAME)
+}
+
+func (c *Config) prependAbsPath(dir string) string {
+	return filepath.Join(c.basePath, dir)
+}
+
+func (c *Config) prependAbsBuildPath(dir string) string {
+	return filepath.Join(c.basePath, BUILD_DIR_NAME, dir)
 }
 
 // If config file could not be read a default config and an error is returned.
 // Its up to callee to decide if we should continue or not.
 func (c *Config) ReadFromConfigFile() (err error) {
-	uri := filepath.Join(c.BasePath, MAIN_CONFIG_FILENAME)
-	log.Printf("Reading config file: %s\n", uri)
+	uri := filepath.Join(c.basePath, MAIN_CONFIG_FILENAME)
+	fmt.Printf("Reading config file: %s\n", uri)
 
 	content, err := ioutil.ReadFile(uri)
 	if err != nil {
-		log.Printf("could not read configuration file: %s", uri)
+		fmt.Printf("could not read configuration file: %s", uri)
 	}
 
 	yaml.Unmarshal(content, c)

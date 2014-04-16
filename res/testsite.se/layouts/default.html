@@ -1,0 +1,20 @@
+---
+layout: doctype.html
+---
+
+<html lang="en">
+<head>
+	<title>{{ .PageTitle }}</title>
+	<link rel="stylesheet" type="text/css" href="css/style.css">
+	{% include analytics.html %}
+</head>
+<body>
+	<div id="top"></div>
+	<div id="sidebar">
+		{% include sidebar.html %}
+	</div>
+	<div id="main">
+		{% content %}
+	</div>
+</body>
+</html>

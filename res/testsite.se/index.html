@@ -1,0 +1,21 @@
+---
+layout: default.html
+title: "Tindra SuperDuperWeb!"
+---
+
+{{ .Title }}
+<div class="posts">
+	{{range .Posts}}
+		<article class="post">
+			<p class="date">{{ .Date }}</p>
+			<h1 class="title"><a href="{{ .Permalink }}">{{ .Title }}</a></h1>
+			<div class="excerpt">
+				{{ .Excerpt }}
+				<div class="clear"></div>
+				<a href="{{ .Permalink }}" class="read-more">read more <span class="fa fa-angle-double-right"></span></a>
+			</div>
+		</article>
+	{{else}}
+		<p>Nothing here yet :(</p>
+	{{end}}
+</div>
