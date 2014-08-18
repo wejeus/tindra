@@ -2,7 +2,7 @@ package context
 
 import (
     "fmt"
-    "log"
+    // "log"
     "path/filepath"
 )
 
@@ -57,8 +57,8 @@ func NewSite(path string) (site *Site, err error) {
 
     includes := Includes{}
 
-    if includes.ReadDir(filepath.Join(path, INCLUDES_DIR_NAME)) != nil {
-        log.Fatal(err)
+    if err = includes.ReadDir(filepath.Join(path, INCLUDES_DIR_NAME)); err != nil {
+        panic(err)
     }
     includes.printAllIncludes()
 

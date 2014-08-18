@@ -26,14 +26,8 @@ type Include struct {
 }
 
 /* path is absolute dir to folder of includes */
-func (i Includes) ReadDir(path string) error {
+func (i Includes) ReadDir(path string) (err error) {
     fmt.Printf("reading includes from: %s\n", path)
-
-    defer func() {
-        if r := recover(); r != nil {
-            fmt.Println("<PANIC!> ", r)
-        }
-    }()
 
     // TODO: Find better way to GLOB .html files
 
@@ -42,14 +36,32 @@ func (i Includes) ReadDir(path string) error {
         return err
     }
 
+    defer func() {
+        if r := recover(); r != nil {
+            switch x := r.(type) {
+            case string:
+                err = errors.New(x)
+            case error:
+                err = x
+            default:
+                err = errors.New("unknown panic")
+            }
+        }
+    }()
+
     for _, fileInfo := range fileInfos {
-        ext := filepath.Ext(fileInfo.Name())
+        filename := fileInfo.Name()
+        ext := filepath.Ext(filename)
 
         if len(ext) == 0 || ext[1:] != "html" {
             continue
         }
 
-        if err := i.buildInclude(path, fileInfo.Name()); err != nil {
+        if i.has(filename) {
+            continue
+        }
+
+        if err := i.buildInclude(path, filename); err != nil {
             return err
         }
     }
@@ -59,14 +71,16 @@ func (i Includes) ReadDir(path string) error {
 
 func (i Includes) buildInclude(path string, filename string) error {
 
-    uri := filepath.Join(path, filename)
-
-    fmt.Println("parsing: " + filename)
-
-    if i.has(filename) && i.get(filename).Generated == false {
-        // fmt.Println("cyclic dependency detected in: " + filename)
-        return errors.New("cyclic dependency detected in: " + filename)
+    if i.has(filename) {
+        if i.get(filename).Generated {
+            return nil
+        } else {
+            return errors.New("cyclic dependency detected in: " + filename)
+        }
     }
+
+    uri := filepath.Join(path, filename)
+    fmt.Println("parsing: " + filename)
 
     fileContent, err := ioutil.ReadFile(uri)
     if err != nil {
@@ -93,7 +107,7 @@ func (i Includes) buildInclude(path string, filename string) error {
 
     i[filename] = Include{Body: fileContent, Generated: true}
 
-    return nil
+    return err
 }
 
 func (i Includes) has(s string) bool {
