@@ -1,11 +1,9 @@
 package context
 
 import (
-	"log"
-	"os"
-	// "path/filepath"
-	"fmt"
-	"io/ioutil"
+    "fmt"
+    "log"
+    "path/filepath"
 )
 
 // Implement this on all 'page' types. Used when generating final site to get content
@@ -13,221 +11,161 @@ import (
 // TODO: Use go routines for templates "Once constructed, a template may be executed safely in parallel."
 
 type Site struct {
-	config   *Config
-	Data     *Data
-	Includes map[string]*Include
-	Layouts  map[string]*Layout
-	// Pages    map[string]*Post // TODO
-	Posts map[string]*Post
+    includes Includes
+    layouts  map[string]*Layout
+    posts    map[string]*Post
+    // Pages    map[string]*Post // TODO
 }
 
-func NewSite() (site *Site, err error) {
-	fmt.Print("Generating new site...")
-
-	config := NewConfig()
-	config.ReadFromConfigFile() // TODO: should be implicit in NewConfig()
-
-	site = &Site{
-		config: config,
-	}
-
-	// files, folders, err := getFilesAndFolders(config.basePath)
-
-	site.Data = NewData(config.prependAbsPath(DATA_DIR_NAME))
-
-	// for k, v := range *site.Data {
-	// 	fmt.Println(k)
-	// 	for k, _ := range v {
-	// 		fmt.Println("af " + k)
-	// 	}
-	// }
-
-	site.Includes, err = readIncludesDir(config.prependAbsPath(INCLUDES_DIR_NAME))
-	if err != nil {
-		log.Fatal(err)
-	}
-	err = BuildIncludes(site.Includes)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	site.Layouts, err = readLayoutsDir(config.prependAbsPath(LAYOUTS_DIR_NAME))
-	if err != nil {
-		log.Fatal(err)
-	}
-	err = BuildLayouts(site.Layouts, site.Includes)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	site.Posts, err = readPostsDir(config.prependAbsPath(POSTS_DIR_NAME), config.MarkdownExt)
-	if err != nil {
-		log.Fatal(err)
-	}
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	for _, post := range site.Posts {
-		err = post.Build(site)
-		if err != nil {
-			log.Fatal(err)
-		}
-	}
-
-	// for _, post := range site.Posts {
-	// 	fmt.Println(string(post.Rendered))
-	// }
-	// site.Posts, err = site.loadAndPreprocessPosts(config.prependAbsPath(POSTS_DIR_NAME), config.MarkdownExt)
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-
-	// s.Pages, err = s.loadAndPreprocessPages(config.basePath, map[string]bool{"html": true})
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-	return
+type RenderedSite struct {
+    // Includes map[string][]byte
+    // Includes map[string][]byte
 }
 
-func copyFolder(src, dest string) {
-
+// TODO: Better name
+type TemplatePage struct {
+    Site      *Site
+    PageTitle string
+    Post      Post // TODO should be *
+    AllPosts  map[string]*Post
+    Data      *Data
+    Date      string // TODO
 }
 
-// separates files and folders, skips special entries and hidden entries
-func getFilesAndFolders(path string) (specialFiles, verbatimDirs map[string]bool, err error) {
-	special := map[string]bool{
-		MAIN_CONFIG_FILENAME: true,
-		INCLUDES_DIR_NAME:    true,
-		LAYOUTS_DIR_NAME:     true,
-		POSTS_DIR_NAME:       true,
-		DATA_DIR_NAME:        true,
-		PLUGINS_DIR_NAME:     true,
-		BUILD_DIR_NAME:       true,
-	}
+func NewSite(path string) (site *Site, err error) {
+    fmt.Println("Generating new site...")
 
-	specialFiles = make(map[string]bool)
-	verbatimDirs = make(map[string]bool)
+    config := NewDefaultConfig()
+    config.ReadFromConfigFile(path) // TODO: should be implicit in NewConfig()
 
-	entries, err := ioutil.ReadDir(path)
-	if err != nil {
-		return
-	}
+    // site = &Site{
+    // 	basePath: path,
+    // 	config:   config,
+    // }
 
-	for _, entry := range entries {
-		if special[entry.Name()] || string([]byte(entry.Name())[0:1]) == "." {
-			continue
-		}
+    // files, folders, err := getFilesAndFolders(config.basePath)
 
-		if entry.IsDir() {
-			verbatimDirs[entry.Name()] = true
-		} else {
-			specialFiles[entry.Name()] = true
-		}
-	}
+    // site.Data = NewData(config.prependAbsPath(DATA_DIR_NAME))
+    // for k, v := range *site.Data {
+    // 	fmt.Println(k)
+    // 	for k, _ := range v {
+    // 		fmt.Println("af " + k)
+    // 	}
+    // }
 
-	return
+    site = new(Site)
+
+    includes := Includes{}
+
+    if includes.ReadDir(filepath.Join(path, INCLUDES_DIR_NAME)) != nil {
+        log.Fatal(err)
+    }
+
+    includes.printAllIncludes()
+    // err = site.readLayoutsDir(path)
+    // if err != nil {
+    //     log.Fatal(err)
+    // }
+
+    // site.posts, err = readPostsDir(path, config.MarkdownExt)
+    // if err != nil {
+    // 	log.Fatal(err)
+    // }
+
+    // TODO: Read pages (index.html, 404.html, others?)
+    return
 }
 
-func (site *Site) BuildAndInstall() (err error) {
-	// FIXME: Dont dare to run this, maybe it removes everything!
-	// err = os.RemoveAll(site.config.BuildPath)
-	// if err != nil {
-	// 	return
-	// }
+func (site *Site) readLayoutsDir(path string) error {
+    path = filepath.Join(path, LAYOUTS_DIR_NAME)
 
-	err = os.MkdirAll(site.config.getAbsBuildPath(), os.ModeDir|0755)
-	if err != nil {
-		return
-	}
+    allowedFiles := map[string]bool{"html": true}
 
-	// for _, p := range site.Pages {
-	// 	err = p.buildAndInstall(site)
-	// 	if err != nil {
-	// 		return
-	// 	}
-	// }
+    rawLayoutFiles, err := readFiles(path, allowedFiles)
+    if err != nil {
+        return err
+    }
 
-	return
+    layouts := make(map[string]*Layout)
+
+    for name, raw := range rawLayoutFiles {
+        l, layoutErr := NewLayout(name, raw)
+        if layoutErr != nil {
+            return layoutErr
+        }
+        layouts[name] = l
+    }
+
+    site.layouts = layouts
+
+    return nil
 }
 
-func list(m map[string][]byte) {
-	for name, _ := range m {
-		fmt.Printf("%s ", name)
-	}
-}
+// func (site *Site) Build() (*RenderedSite, error) {
 
-func show(m map[string][]byte) {
-	for name, data := range m {
-		fmt.Printf("%s\n----------------------------\n%s\n", name, string(data))
-	}
-}
+//     builtSite := new(RenderedSite)
 
-// func installDir(directory string) {
-// 	os.Wal
-// 	// Write to disk
-// 	err = os.MkdirAll(outPath, os.ModeDir|0755)
-// 	if err != nil {
-// 		return
-// 	}
-// 	fmt.Printf("installing: %s\n", outFile)
-// 	return ioutil.WriteFile(outFile, parsed.Bytes(), 0644)
+//     builtSite.Includes = make(map[string][]byte)
+
+//     for name, rawInclude := range site.includes {
+//         fmt.Println("Building: " + name)
+//         rendered, err := rawInclude.Build(site)
+//         if err != nil {
+//             return nil, err
+//         }
+
+//         builtSite.Includes[name] = rendered
+//     }
+
+//     // if err := BuildLayouts(site.layouts, site.includes); err != nil {
+//     // 	return err
+//     // }
+
+//     // for _, post := range site.posts {
+//     // 	if err := post.Build(site); err != nil {
+//     // 		return err
+//     // 	}
+//     // }
+
+//     // TODO: We can build/generate CSS here
+
+//     return builtSite, nil
 // }
 
-// func (site *Site) loadAndPreprocessPosts(directory string, postfixes map[string]bool) (posts map[string]*Post, err error) {
-// 	files, err := readFiles(directory, postfixes)
-// 	if err != nil {
-// 		return
-// 	}
+func (site *RenderedSite) Install() error {
+    fmt.Println("Installing..")
+    // copy /css
+    // copy /javascript
+    // copy /images
+    // copy /favicon.ico
 
-// 	posts = make(map[string]*Post)
-// 	for filename, data := range files {
-// 		post := site.NewPost(filename, data)
-// 		posts[filename] = post
-// 	}
+    // output previously built posts
+    // output previously built pages (index.html, 404.html, others?)
 
-// 	return
-// }
+    // write Posts to a dir and filename based on permalink/title
 
-// func (site *Site) loadAndPreprocessStaticPages(directory string, postfixes map[string]bool) (posts map[string]*Post, err error) {
-// 	files, err := readFiles(directory, postfixes)
-// 	if err != nil {
-// 		return
-// 	}
+    // buildPath := filepath.Join(site.basePath, BUILD_DIR_NAME)
+    // fmt.Println("build: " + buildPath)
+    // if err := os.RemoveAll(buildPath); err != nil {
+    // 	return err
+    // }
 
-// 	posts = make(map[string]*Post)
-// 	for filename, data := range files {
-// 		fmt.Print("parsing page: " + filename)
-// 		post := site.NewPage(filename, data)
-// 		posts[filename] = post
-// 	}
+    // if err := os.MkdirAll(buildPath, os.ModeDir|0755); err != nil {
+    // 	return err
+    // }
 
-// 	return
-// }
+    // if err := copyFolderVerbatim(filepath.Join(site.basePath, CSS_DIR_NAME), buildPath); err != nil {
+    // 	return err
+    // }
 
-// func (site *Site) NewStaticPage(filename string, data []byte) (post *Post) {
-// 	frontMatter, body, err := extractFrontMatterAndBody(data, "\n\n") // TODO: get from site config
-// 	if err != nil {
-// 		log.Fatal(err)
-// 	}
+    // for _, post := range site.posts {
+    // 	if err := post.Install(site); err != nil {
+    // 		return err
+    // 	}
+    // }
 
-// 	if frontMatter.Layout != "" && site.Layouts[frontMatter.Layout] == nil {
-// 		log.Fatal("error: \"" + filename + "\" declared layout that do not exist!")
-// 	}
+    return nil
+}
 
-// 	title := site.config.Name
-// 	if len(frontMatter.Title) != 0 {
-// 		title = frontMatter.Title
-// 	}
-
-// 	parentLayout := site.Layouts[frontMatter.Layout]
-
-// 	return &Post{
-// 		parent:   parentLayout,
-// 		content:  body,
-// 		filename: filename,
-// 		path:     ".",
-
-// 		Title: title,
-// 	} // TODO: Does this cause a copy upon return?
-// }
+// TODO
+// func clean()
