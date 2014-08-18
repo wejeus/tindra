@@ -60,8 +60,8 @@ func NewSite(path string) (site *Site, err error) {
     if includes.ReadDir(filepath.Join(path, INCLUDES_DIR_NAME)) != nil {
         log.Fatal(err)
     }
-
     includes.printAllIncludes()
+
     // err = site.readLayoutsDir(path)
     // if err != nil {
     //     log.Fatal(err)
