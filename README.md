@@ -3,17 +3,15 @@
 
 Like Rubys Jekyll but for Go! Project is in initial planning and hacking phase, stay tuned! Try it out by running:
 	
-	go run tindra.go res/testsite.se/
+	go run tindra.go --target <site folder>
 
-Should output a generated post on stdout. So far includes/layouts/markdown/data is implemented.
+Should output a generated site in <site folder>/build dir
 
 
 ### Special folders
 
 All files and folders in site root are copied verbatim except for a few that are special and one that is allways ignored (build/, config.yml). Files in root are parsed.
 
-
-	<site>/images 		- site specific media (assets used for building site framework)
 	<site>/media		- content specific media (media used in posts)
 	<site>/css
 
@@ -23,9 +21,10 @@ All files and folders in site root are copied verbatim except for a few that are
 
 	404.html
 	index.html
+	favicon.png
 	config.yml
 
-## Generation dependency graph
+## Dependency Graph
 
 Includes are static and nothing can be inserted
 Layouts can use other layouts.
@@ -34,6 +33,8 @@ Posts can use layouts
 ## API 
 
 #### Pre-processing 
+
+Tindra relies on *convention over configuration* for many of its setttings. Use special folders for content.
 
 Include files: {% include sidebar.html %}
 For layouts: {% content %}
@@ -48,3 +49,10 @@ All blog post files must begin with YAML front-matter. That is the first paragra
 	layout: "layout.html"  // if not set just outputs parsed markdown
 	---
 
+## Roadmap
+
+* Add support for file inclusion
+* Add ability run as stand alone webserver
+* Add filesytem watchers
+* Add support for plugins such as Disqus
+* Generation of feed.xml
