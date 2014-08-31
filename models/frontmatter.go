@@ -1,42 +1,16 @@
-package context
+package models
 
 import (
     "errors"
     "fmt"
+    "github.com/wejeus/tindra/utils"
     "gopkg.in/yaml.v1"
-    "io/ioutil"
     "path/filepath"
     "regexp"
     "strings"
 )
 
-// TODO: Also read subfolders and prepend subfolder name to key
-// TODO: Implement recursive read of dirs
-// Reads all files with with postfix set to true in postfixes map.
-func readFiles(directory string, postfixes map[string]bool) (files map[string][]byte, err error) {
-    fmt.Printf("Reading directory: %s\n", directory)
-    files = make(map[string][]byte)
-
-    entries, err := ioutil.ReadDir(directory)
-    if err != nil {
-        return
-    }
-
-    for _, f := range entries {
-        extension := filepath.Ext(f.Name())
-        if len(extension) != 0 && postfixes[extension[1:]] {
-            uri := filepath.Join(directory, f.Name())
-            data, err := ioutil.ReadFile(uri)
-            if err != nil {
-                return files, err
-            }
-            files[f.Name()] = data
-        }
-    }
-
-    return
-}
-
+// TODO: Namechange to 'META' ?
 type FrontMatter struct {
     // If set, this specifies the layout file to use.
     // Use the layout file name without the file extension.
@@ -56,10 +30,6 @@ type FrontMatter struct {
     // This can be used to ensure correct sorting of posts. Must have format YYYY-MM-DD.
     Date string // TODO
 
-    // Set to false if you don’t want a specific post to show up when the site is generated.
-    // Defaults to true.
-    Published string // TODO
-
     // Similar to categories, one or multiple tags can be added to a post.
     // Also like categories, tags can be specified as a YAML list or a space- separated string.
     Tags []string // TODO
@@ -75,6 +45,22 @@ type FrontMatter struct {
     // TODO: Add support for custom tags?
 }
 
+func (f FrontMatter) HasLayout() bool {
+    return len(f.Layout) != 0
+}
+
+func (f FrontMatter) String() string {
+    return fmt.Sprintf("- FrontMatter --------------\n"+
+        "Layout: %s\n"+
+        "Title: %s\n"+
+        "Permalink: %s\n"+
+        "Date: %s\n"+
+        "Published: %s\n"+
+        "Tags: %s\n"+
+        "----------------------------\n",
+        f.Layout, f.Title, f.Permalink, f.Date, f.Tags)
+}
+
 //  By default excerpt is your first paragraph of a post: everything before
 //  the first two new lines. Testing if an excerpt is present is simply done by testing if first chars == "---"
 //
@@ -85,23 +71,46 @@ type FrontMatter struct {
 //      Second paragraph (post content)
 //
 // if file does not contain any frontMatter only the body will be returned and all other values will be nil
-func extractFrontMatterAndBody(data []byte, separator string) (frontMatter FrontMatter, body []byte, err error) {
+func extractFrontMatterAndContent(file string, data []byte, separator string) (frontMatter FrontMatter, content []byte, err error) {
+    filename := filepath.Base(file)
     // TODO: Change regexp to use .MustCompile
     hasFrontMatter, err := regexp.Match("^---\n", data) // TODO: add better frontMatter regexp: "^---\n.*\n---\n"
     if hasFrontMatter {
-        // if has frontMatter post must consist of 2 parts: (frontMatter, body)
+        // if has frontMatter post must consist of 2 parts: (frontMatter, content)
         post := strings.SplitN(string(data), separator, 2)
         if len(post) != 2 {
-            err = errors.New("could not extract (frontMatter, body)")
+            err = errors.New("could not extract (frontMatter, content)")
             return
         }
 
         // TODO: Check that frontMatter only contains one value for key 'layout'
         err = yaml.Unmarshal([]byte(post[0]), &frontMatter)
-        body = []byte(post[1])
+        content = []byte(post[1])
     } else {
-        body = data
+        content = data
+    }
+
+    if len(frontMatter.Title) == 0 {
+        frontMatter.Title = utils.TitleFromFilename(filename)
     }
 
     return
 }
+
+// func (p *Post) Date() string {
+//     return "DDAAAATE"
+// }
+
+// if has permalink ->
+//     return permalink
+
+// var permalink
+
+// if has date ->
+//     permalink.append(date)
+// else if filename has date ->
+//     filenameDate = parseDate(filename)
+//     permalink.append(filenameDate)
+
+// permalink.append(filename)
+// permalink.append(.html)

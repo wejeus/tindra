@@ -1,12 +1,18 @@
-package context
+package models
 
 import (
+    "bytes"
     "errors"
     "fmt"
     "io/ioutil"
     "path/filepath"
     "regexp"
 )
+
+// Includes is parsed in a tree bottom up order. If a node rely on a another node not
+// previously seen above it this node is parsed recurivly and the used.
+// if a node encounters a node above it which have been seen previously but not marked
+// as completly generated it means a dependency cycle have been detected.
 
 // ALGORITHM
 //
@@ -80,7 +86,7 @@ func (i Includes) buildInclude(path string, filename string) error {
     }
 
     uri := filepath.Join(path, filename)
-    fmt.Println("parsing: " + filename)
+    fmt.Println("parsing include: " + filename)
 
     fileContent, err := ioutil.ReadFile(uri)
     if err != nil {
@@ -119,8 +125,12 @@ func (i Includes) get(s string) Include {
     return i[s]
 }
 
-func (i Includes) printAllIncludes() {
+func (i Includes) String() string {
+    var buffer bytes.Buffer
     for name, include := range i {
-        fmt.Printf("\n---------------\n%s\n---------------\n%s\n", name, string(include.Body))
+        s := fmt.Sprintf("---------------\n%s\n---------------\n%s", name, string(include.Body))
+        buffer.WriteString(s)
     }
+
+    return buffer.String()
 }

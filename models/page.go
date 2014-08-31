@@ -1,4 +1,4 @@
-package context
+package models
 
 // type Page struct {
 // 	Title string // site title

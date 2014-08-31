@@ -3,7 +3,9 @@ package main
 import (
     "flag"
     "fmt"
+    // "github.com/wejeus/tindra/config"
     "github.com/wejeus/tindra/context"
+    // "github.com/wejeus/tindra/models"
     "log"
     "os"
     "path/filepath"
@@ -29,23 +31,17 @@ func main() {
 
     // TODO: Test if target is valid (make approximation)
 
-    basePath, err := filepath.Abs(target)
-    fmt.Printf("BasePath: %s\n", basePath)
+    source, err := filepath.Abs(target)
+    fmt.Printf("generating: %s\n", target)
+    fmt.Printf("path: %s\n\n", source)
 
     if err != nil {
         log.Fatal("could not get current working directory!")
     }
 
-    _, err = context.NewSite(basePath)
-    if err != nil {
-        fmt.Print(err)
-    }
+    site := context.NewContext(source)
 
-    // var renderedSite *context.RenderedSite
-
-    // if renderedSite, err = site.Build(); err != nil {
-    //     fmt.Print(err)
-    // }
+    site.Install(filepath.Join(source, "/build"))
 
     // if err := renderedSite.Install(); err != nil {
     //     fmt.Print(err)

@@ -1,7 +1,8 @@
-package context
+package models
 
 import (
     "fmt"
+    "github.com/wejeus/tindra/utils"
     "gopkg.in/yaml.v1"
     "os"
     "path/filepath"
@@ -20,7 +21,7 @@ func NewData(path string) *Data {
         return &data
     }
 
-    dataFiles, _ := readFiles(path, map[string]bool{"yaml": true, "yml": true})
+    dataFiles, _ := utils.ReadFiles(path, map[string]bool{"yaml": true, "yml": true})
 
     // TODO: Is interface{} a pointer or will this cause an unnecessary copy?
     for filename, yamlData := range dataFiles {
