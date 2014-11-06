@@ -1,13 +1,19 @@
 package models
 
-import "fmt"
+import (
+	"fmt"
+	"path/filepath"
+)
 
 type Resource struct {
-    Name         string
-    RelativeDir  string
-    AbsolutePath string
+	Filename string
+	RelDir   string
+}
+
+func (self Resource) RelPath() string {
+	return filepath.Join(self.RelDir, self.Filename)
 }
 
 func (self Resource) String() string {
-    return fmt.Sprintf("Name: %s\nRelativeDir: %s\nAbsolutePath: %s\n", self.Name, self.RelativeDir, self.AbsolutePath)
+	return fmt.Sprintf("\tFilename: %s\nRelDir: %s\nRelPath(): %s\n", self.Filename, self.RelDir, self.RelPath())
 }
